@@ -1,0 +1,50 @@
+name: foodie_app
+description: A smooth Flutter food delivery app with Material 3 green theme.
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management — lightweight ChangeNotifier (swap with riverpod/bloc for scale)
+  provider: ^6.1.1
+
+  # For future Firebase integration, uncomment:
+  # firebase_core: ^2.24.0
+  # firebase_auth: ^4.15.0
+  # cloud_firestore: ^4.13.5
+  # firebase_storage: ^11.5.5
+
+  # Utilities
+  intl: ^0.18.1
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Google Fonts — Nunito
+  # Add the font files or use google_fonts package instead:
+  # fonts:
+  #   - family: Nunito
+  #     fonts:
+  #       - asset: assets/fonts/Nunito-Regular.ttf
+  #       - asset: assets/fonts/Nunito-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Nunito-ExtraBold.ttf
+  #         weight: 800
+  #       - asset: assets/fonts/Nunito-Black.ttf
+  #         weight: 900
+
+  assets:
+    - assets/images/
