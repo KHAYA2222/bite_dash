@@ -1,16 +1,24 @@
 # bite_dash
 
-A new Flutter project.
+# BiteDash
 
-## Getting Started
+A modern **food delivery mobile app MVP** built with Flutter using **Material 3 design** and a clean green-themed UI.
 
-This project is a starting point for a Flutter application.
+**scalable architecture and UI/UX best practices**.
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## ✨ Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Material 3 (modern UI design)
+- Food browsing with clean card layout
+- Search bar (UI-ready)
+- Food detail screen
+- Cart management system
+- Simulated payment flow
+- Promo banner UI
+- Custom green theme (brand-ready)
+-  Responsive and clean layout
+
+---
+# Next connect Firebase, since I have removed the Flask DB
