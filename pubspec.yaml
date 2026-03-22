@@ -12,40 +12,25 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # State management — lightweight ChangeNotifier (swap with riverpod/bloc for scale)
-  provider: ^6.1.1
+  # Firebase — pinned to compatible versions that work on Web + Mobile
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
 
-  # For future Firebase integration, uncomment:
-  # firebase_core: ^2.24.0
-  # firebase_auth: ^4.15.0
-  # cloud_firestore: ^4.13.5
-  # firebase_storage: ^11.5.5
+  # State management
+  provider: ^6.1.2
 
   # Utilities
-  intl: ^0.18.1
-  shared_preferences: ^2.2.2
-  firebase_core: ^4.5.0
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
-
-  # Google Fonts — Nunito
-  # Add the font files or use google_fonts package instead:
-  # fonts:
-  #   - family: Nunito
-  #     fonts:
-  #       - asset: assets/fonts/Nunito-Regular.ttf
-  #       - asset: assets/fonts/Nunito-Bold.ttf
-  #         weight: 700
-  #       - asset: assets/fonts/Nunito-ExtraBold.ttf
-  #         weight: 800
-  #       - asset: assets/fonts/Nunito-Black.ttf
-  #         weight: 900
 
   assets:
     - assets/images/
