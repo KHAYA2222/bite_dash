@@ -24,6 +24,7 @@ dependencies:
   # Utilities
   intl: ^0.18.1
   shared_preferences: ^2.2.2
+  firebase_core: ^4.5.0
 
 dev_dependencies:
   flutter_test:
