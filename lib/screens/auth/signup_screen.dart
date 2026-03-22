@@ -138,14 +138,14 @@ class _SignupScreenState extends State<SignupScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Join Foodie and start ordering',
+                    'Join BitDash and start ordering',
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: const Color(0xFF9E9E9E)),
                   ),
                   const SizedBox(height: 32),
 
                   // Full name
-                  _FieldLabel('Full Name'),
+                  const _FieldLabel('Full Name'),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _nameCtrl,
@@ -166,7 +166,7 @@ class _SignupScreenState extends State<SignupScreen>
                   const SizedBox(height: 18),
 
                   // Email
-                  _FieldLabel('Email Address'),
+                  const _FieldLabel('Email Address'),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _emailCtrl,
@@ -191,7 +191,7 @@ class _SignupScreenState extends State<SignupScreen>
                   const SizedBox(height: 18),
 
                   // Phone (optional)
-                  _FieldLabel('Phone Number (optional)'),
+                  const _FieldLabel('Phone Number (optional)'),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _phoneCtrl,
@@ -205,7 +205,7 @@ class _SignupScreenState extends State<SignupScreen>
                   const SizedBox(height: 18),
 
                   // Password
-                  _FieldLabel('Password'),
+                  const _FieldLabel('Password'),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _passCtrl,
@@ -234,7 +234,7 @@ class _SignupScreenState extends State<SignupScreen>
                   const SizedBox(height: 18),
 
                   // Confirm password
-                  _FieldLabel('Confirm Password'),
+                  const _FieldLabel('Confirm Password'),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _confirmPassCtrl,
@@ -361,11 +361,10 @@ class _SignupScreenState extends State<SignupScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'Already have an account? ',
                         style: TextStyle(
-                            fontFamily: 'Nunito',
-                            color: const Color(0xFF9E9E9E)),
+                            fontFamily: 'Nunito', color: Color(0xFF9E9E9E)),
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),

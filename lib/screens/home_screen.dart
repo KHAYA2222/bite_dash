@@ -401,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Free Delivery\non orders over R350',
+                    ' Currently we use COD',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
