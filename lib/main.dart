@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:foodie_app/providers/food_provider.dart';
+import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -28,7 +30,15 @@ Future<void> main() async {
     ),
   );
 
-  runApp(const FoodieApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _authProvider),
+        ChangeNotifierProvider(create: (_) => FoodProvider()),
+      ],
+      child: const FoodieApp(),
+    ),
+  );
 }
 
 class FoodieApp extends StatelessWidget {

@@ -1,5 +1,6 @@
 // models/food.dart
 // Firebase-ready model — add fromFirestore/toFirestore when integrating
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Food {
   final String id;
@@ -74,10 +75,13 @@ class Food {
   }
 
   // Uncomment when integrating Firebase Firestore:
-  // factory Food.fromFirestore(DocumentSnapshot doc) {
-  //   final data = doc.data() as Map<String, dynamic>;
-  //   return Food.fromJson({...data, 'id': doc.id});
-  // }
+  factory Food.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Food.fromJson({
+      ...data,
+      'id': doc.id,
+    });
+  }
 
   Food copyWith({
     String? id,
