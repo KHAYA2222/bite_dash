@@ -17,29 +17,17 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -59,4 +47,41 @@ class DefaultFirebaseOptions {
     projectId: 'food-dash-c07c0',
     storageBucket: 'food-dash-c07c0.firebasestorage.app',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCofVW9YxggJbxr8rmgMwRY67G_0z-kQ7I',
+    appId: '1:161129343073:web:0e23b8874aa3a8d9e26220',
+    messagingSenderId: '161129343073',
+    projectId: 'food-dash-c07c0',
+    authDomain: 'food-dash-c07c0.firebaseapp.com',
+    storageBucket: 'food-dash-c07c0.firebasestorage.app',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyAsKAkHTC7It6V75uUFkN2G9MqzTwIZbuw',
+    appId: '1:161129343073:ios:aaaada9e5d3e0cd5e26220',
+    messagingSenderId: '161129343073',
+    projectId: 'food-dash-c07c0',
+    storageBucket: 'food-dash-c07c0.firebasestorage.app',
+    iosBundleId: 'com.example.biteDash',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyAsKAkHTC7It6V75uUFkN2G9MqzTwIZbuw',
+    appId: '1:161129343073:ios:aaaada9e5d3e0cd5e26220',
+    messagingSenderId: '161129343073',
+    projectId: 'food-dash-c07c0',
+    storageBucket: 'food-dash-c07c0.firebasestorage.app',
+    iosBundleId: 'com.example.biteDash',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCofVW9YxggJbxr8rmgMwRY67G_0z-kQ7I',
+    appId: '1:161129343073:web:fce54158a1a1fb3fe26220',
+    messagingSenderId: '161129343073',
+    projectId: 'food-dash-c07c0',
+    authDomain: 'food-dash-c07c0.firebaseapp.com',
+    storageBucket: 'food-dash-c07c0.firebasestorage.app',
+  );
+
 }

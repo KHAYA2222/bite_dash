@@ -12,15 +12,15 @@ final _authProvider = AuthProvider();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1️⃣ Initialize Firebase
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 2️⃣ Initialize AuthProvider and wait for first auth state
-  await _authProvider.initAsync();
+  // Start listening to auth state
+  _authProvider.init();
 
-  // 3️⃣ Transparent status bar
+  // Set transparent status bar
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -131,7 +131,8 @@ class FoodieApp extends StatelessWidget {
   }
 }
 
-/// Fully web-safe AuthWrapper
+/// AuthWrapper routes to HomeScreen if authenticated,
+/// LoginScreen if not. Fully web-safe with async fallback.
 class AuthWrapper extends StatefulWidget {
   final AuthProvider authProvider;
   const AuthWrapper({super.key, required this.authProvider});
@@ -144,6 +145,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
+    // In case init() hasn't completed before build
     widget.authProvider.addListener(_onAuthChange);
   }
 
@@ -159,8 +161,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     final status = widget.authProvider.status;
 
-    // Show loader while auth state is unknown or profile loading
-    if (status == AuthStatus.unknown || widget.authProvider.isLoading) {
+    // Show loading spinner while auth state is unknown
+    if (status == AuthStatus.unknown) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
