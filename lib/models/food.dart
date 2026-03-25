@@ -1,5 +1,6 @@
 // models/food.dart
-// Firebase-ready model — add fromFirestore/toFirestore when integrating
+// Food model — read from Firestore 'foods' collection
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Food {
@@ -35,7 +36,18 @@ class Food {
     this.tags = const [],
   });
 
-  // Firebase-ready factory constructors
+  // ✅ Simple Firestore factory (matches your provider)
+  factory Food.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final data = snapshot.data()!;
+
+    return Food.fromJson({
+      ...data,
+      'id': snapshot.id, // inject document ID
+    });
+  }
+
   factory Food.fromJson(Map<String, dynamic> json) {
     return Food(
       id: json['id'] as String,
@@ -72,15 +84,6 @@ class Food {
       'ingredients': ingredients,
       'tags': tags,
     };
-  }
-
-  // Uncomment when integrating Firebase Firestore:
-  factory Food.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Food.fromJson({
-      ...data,
-      'id': doc.id,
-    });
   }
 
   Food copyWith({
@@ -124,7 +127,11 @@ class CartItem {
   int quantity;
   String? specialNote;
 
-  CartItem({required this.food, this.quantity = 1, this.specialNote});
+  CartItem({
+    required this.food,
+    this.quantity = 1,
+    this.specialNote,
+  });
 
   double get totalPrice => food.price * quantity;
 
@@ -137,7 +144,7 @@ class CartItem {
   }
 }
 
-// Order model — Firebase-ready
+// Order model
 class Order {
   final String id;
   final List<CartItem> items;

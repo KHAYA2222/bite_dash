@@ -1,11 +1,11 @@
 // screens/home_screen.dart
 
 import 'package:flutter/material.dart';
-import '../data/mock_data.dart';
 import '../models/food.dart';
-import '../providers/cart_provider.dart';
-import '../widgets/food_card.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
+import '../services/food_service.dart';
+import '../widgets/food_card.dart';
 import 'cart_screen.dart';
 import 'profile_screen.dart';
 import 'detail_screen.dart';
@@ -19,26 +19,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  // In a real Firebase app, replace with StreamProvider / FutureProvider
   final CartProvider _cartProvider = CartProvider();
+  final FoodService _foodService = FoodService();
   String _selectedCategory = 'All';
   String _searchQuery = '';
   int _selectedNavIndex = 0;
   late final AnimationController _fadeController;
   final TextEditingController _searchController = TextEditingController();
 
-  List<Food> get _displayedFoods {
-    var foods = getFoodsByCategory(_selectedCategory);
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      foods = foods
-          .where((f) =>
-              f.name.toLowerCase().contains(q) ||
-              f.tags.any((t) => t.toLowerCase().contains(q)))
-          .toList();
-    }
-    return foods;
-  }
+  // Firestore streams — rebuild UI on data changes
+  Stream<List<Food>> get _foodsStream =>
+      _foodService.foodsStream(category: _selectedCategory);
+  Stream<List<Food>> get _popularStream => _foodService.popularStream();
+  Stream<List<String>> get _categoriesStream => _foodService.categoriesStream();
 
   @override
   void initState() {
@@ -86,7 +79,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (ctx, anim, _) => CartScreen(cartProvider: _cartProvider),
+        pageBuilder: (ctx, anim, _) => CartScreen(
+            cartProvider: _cartProvider, authProvider: widget.authProvider),
         transitionsBuilder: (ctx, anim, _, child) {
           return SlideTransition(
             position: Tween<Offset>(
@@ -161,36 +155,66 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: _buildSectionHeader('Explore Menu', theme)),
               SliverToBoxAdapter(child: _buildCategories(cs, theme)),
 
-              // Grid
-              _displayedFoods.isEmpty
-                  ? SliverToBoxAdapter(child: _buildEmptyState(cs))
-                  : SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                      sliver: SliverGrid(
-                        delegate: SliverChildBuilderDelegate(
-                          (ctx, idx) {
-                            final food = _displayedFoods[idx];
-                            return ListenableBuilder(
-                              listenable: _cartProvider,
-                              builder: (_, __) => FoodCard(
-                                food: food,
-                                isInCart: _cartProvider.isInCart(food.id),
-                                onTap: () => _navigateToDetail(food),
-                                onAddToCart: () => _cartProvider.addItem(food),
-                              ),
-                            );
-                          },
-                          childCount: _displayedFoods.length,
-                        ),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: 0.72,
+              // Food grid — live Firestore stream
+              StreamBuilder<List<Food>>(
+                stream: _foodsStream,
+                builder: (ctx, snap) {
+                  if (snap.connectionState == ConnectionState.waiting &&
+                      !snap.hasData) {
+                    return SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 60),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: cs.primary,
+                            strokeWidth: 2.5,
+                          ),
                         ),
                       ),
+                    );
+                  }
+                  // Apply client-side search filter
+                  var foods = snap.data ?? [];
+                  if (_searchQuery.isNotEmpty) {
+                    final q = _searchQuery.toLowerCase();
+                    foods = foods
+                        .where((f) =>
+                            f.name.toLowerCase().contains(q) ||
+                            f.tags.any((t) => t.toLowerCase().contains(q)))
+                        .toList();
+                  }
+                  if (foods.isEmpty) {
+                    return SliverToBoxAdapter(child: _buildEmptyState(cs));
+                  }
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                    sliver: SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (ctx, idx) {
+                          final food = foods[idx];
+                          return ListenableBuilder(
+                            listenable: _cartProvider,
+                            builder: (_, __) => FoodCard(
+                              food: food,
+                              isInCart: _cartProvider.isInCart(food.id),
+                              onTap: () => _navigateToDetail(food),
+                              onAddToCart: () => _cartProvider.addItem(food),
+                            ),
+                          );
+                        },
+                        childCount: foods.length,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 14,
+                        crossAxisSpacing: 14,
+                        childAspectRatio: 0.72,
+                      ),
                     ),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -390,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      '🎉 Limited Time',
+                      '🚚 Free Delivery',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -400,8 +424,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    ' Currently we use COD',
+                  Text(
+                    'Free delivery on orders over R${kFreeDeliveryThreshold.toStringAsFixed(0)}',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -411,23 +435,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Container(
-                  //   padding:
-                  //       const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  //   decoration: BoxDecoration(
-                  //     color: Colors.white,
-                  //     borderRadius: BorderRadius.circular(12),
-                  //   ),
-                  //   child: Text(
-                  //     'Order Now',
-                  //     style: TextStyle(
-                  //       color: cs.primary,
-                  //       fontSize: 13,
-                  //       fontWeight: FontWeight.w800,
-                  //       fontFamily: 'Nunito',
-                  //     ),
-                  //   ),
-                  // ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Order Now',
+                      style: TextStyle(
+                        color: cs.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Nunito',
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -451,25 +475,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildPopularList() {
-    final popular = getPopularFoods();
     return SizedBox(
       height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        physics: const BouncingScrollPhysics(),
-        itemCount: popular.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (ctx, idx) {
-          final food = popular[idx];
-          return ListenableBuilder(
-            listenable: _cartProvider,
-            builder: (_, __) => FoodCardHorizontal(
-              food: food,
-              isInCart: _cartProvider.isInCart(food.id),
-              onTap: () => _navigateToDetail(food),
-              onAddToCart: () => _cartProvider.addItem(food),
-            ),
+      child: StreamBuilder<List<Food>>(
+        stream: _popularStream,
+        builder: (ctx, snap) {
+          final popular = snap.data ?? [];
+          if (popular.isEmpty) {
+            return const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            itemCount: popular.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (ctx, idx) {
+              final food = popular[idx];
+              return ListenableBuilder(
+                listenable: _cartProvider,
+                builder: (_, __) => FoodCardHorizontal(
+                  food: food,
+                  isInCart: _cartProvider.isInCart(food.id),
+                  onTap: () => _navigateToDetail(food),
+                  onAddToCart: () => _cartProvider.addItem(food),
+                ),
+              );
+            },
           );
         },
       ),
@@ -479,42 +517,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildCategories(ColorScheme cs, ThemeData theme) {
     return SizedBox(
       height: 42,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        physics: const BouncingScrollPhysics(),
-        itemCount: kCategories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (ctx, idx) {
-          final cat = kCategories[idx];
-          final selected = _selectedCategory == cat;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = cat),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: selected ? cs.primary : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  if (!selected)
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+      child: StreamBuilder<List<String>>(
+        stream: _categoriesStream,
+        builder: (ctx, snap) {
+          final categories = snap.data ?? ['All'];
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            itemCount: categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (ctx, idx) {
+              final cat = categories[idx];
+              final selected = _selectedCategory == cat;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedCategory = cat),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected ? cs.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      if (!selected)
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                    ],
+                  ),
+                  child: Text(
+                    cat,
+                    style: TextStyle(
+                      color: selected ? Colors.white : const Color(0xFF6E6E6E),
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 13,
                     ),
-                ],
-              ),
-              child: Text(
-                cat,
-                style: TextStyle(
-                  color: selected ? Colors.white : const Color(0xFF6E6E6E),
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  fontSize: 13,
-                  fontFamily: 'Nunito',
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),

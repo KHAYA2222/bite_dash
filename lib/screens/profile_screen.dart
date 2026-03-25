@@ -80,13 +80,18 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _showComingSoon() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Coming soon!',
-          style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w600)),
-      backgroundColor: Theme.of(context).colorScheme.secondary,
+      content: const Row(children: [
+        Icon(Icons.construction_rounded, color: Colors.white, size: 18),
+        SizedBox(width: 10),
+        Text('Feature coming soon',
+            style:
+                TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w600)),
+      ]),
+      backgroundColor: const Color(0xFF2E7D32),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       margin: const EdgeInsets.all(16),
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds: 2),
     ));
   }
 
@@ -171,14 +176,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       label: 'About Foodie',
                       onTap: _showComingSoon,
                     ),
-                    // _MenuItem(
-                    //   icon: Icons.cloud_upload_outlined,
-                    //   label: 'Seed Database',
-                    //   onTap: () => Navigator.push(
-                    //     context,
-                    //     MaterialPageRoute(builder: (_) => const SeedScreen()),
-                    //   ),
-                    // ),
+                    _MenuItem(
+                      icon: Icons.cloud_upload_outlined,
+                      label: 'Seed Database',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SeedScreen()),
+                      ),
+                    ),
                   ]),
                 ),
                 SliverToBoxAdapter(

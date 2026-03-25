@@ -1,8 +1,12 @@
 // providers/cart_provider.dart
-// Simple ChangeNotifier cart — swap with Riverpod/Bloc when scaling
 
 import 'package:flutter/material.dart';
 import '../models/food.dart';
+
+// ── Delivery config ───────────────────────────────────────────────────────────
+// Adjust these values to match your actual delivery pricing.
+const double kFreeDeliveryThreshold = 300.0; // R300 and over = free delivery
+const double kDeliveryFee = 29.99; // flat fee below threshold
 
 class CartProvider extends ChangeNotifier {
   final List<CartItem> _items = [];
@@ -13,13 +17,16 @@ class CartProvider extends ChangeNotifier {
 
   double get subtotal => _items.fold(0, (sum, item) => sum + item.totalPrice);
 
-  double get deliveryFee => subtotal > 0 ? (subtotal >= 30 ? 0 : 2.99) : 0;
+  double get deliveryFee => subtotal > 0
+      ? (subtotal >= kFreeDeliveryThreshold ? 0 : kDeliveryFee)
+      : 0;
 
   double get total => subtotal + deliveryFee;
 
-  bool get freeDelivery => subtotal >= 30;
+  bool get freeDelivery => subtotal >= kFreeDeliveryThreshold;
 
-  double get amountToFreeDelivery => freeDelivery ? 0 : 30 - subtotal;
+  double get amountToFreeDelivery =>
+      freeDelivery ? 0 : kFreeDeliveryThreshold - subtotal;
 
   bool isInCart(String foodId) => _items.any((item) => item.food.id == foodId);
 

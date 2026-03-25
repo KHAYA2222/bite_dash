@@ -1,5 +1,5 @@
 // models/user_model.dart
-// Firebase-ready — swap mock auth with FirebaseAuth when integrating.
+// User model — stored in Firestore under users/{uid}
 
 class UserModel {
   final String id;

@@ -257,40 +257,7 @@ class _LoginScreenState extends State<LoginScreen>
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
-
-                    // Divider
-                    Row(children: [
-                      Expanded(
-                          child:
-                              Divider(color: Colors.grey.shade200, height: 1)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('or',
-                            style: TextStyle(
-                                fontFamily: 'Nunito',
-                                color: Colors.grey.shade400,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                      Expanded(
-                          child:
-                              Divider(color: Colors.grey.shade200, height: 1)),
-                    ]),
-                    const SizedBox(height: 24),
-
-                    // Social placeholders
-                    _SocialButton(
-                      label: 'Continue with Google',
-                      icon: Icons.g_mobiledata_rounded,
-                      onTap: () => _showComingSoon(context),
-                    ),
-                    const SizedBox(height: 12),
-                    _SocialButton(
-                      label: 'Continue with Apple',
-                      icon: Icons.apple_rounded,
-                      onTap: () => _showComingSoon(context),
-                    ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 16),
 
                     // Sign up link
                     Row(
@@ -372,12 +339,21 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final email = ctrl.text.trim();
+                if (email.isEmpty) return;
                 Navigator.pop(ctx);
+                final ok = await widget.authProvider.sendPasswordReset(email);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Text('Reset link sent! Check your inbox.',
-                      style: TextStyle(fontFamily: 'Nunito')),
-                  backgroundColor: cs.primary,
+                  content: Text(
+                    ok
+                        ? 'Reset link sent! Check your inbox.'
+                        : widget.authProvider.errorMessage ??
+                            'Could not send reset email.',
+                    style: const TextStyle(fontFamily: 'Nunito'),
+                  ),
+                  backgroundColor: ok ? cs.primary : cs.error,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
@@ -392,18 +368,6 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       ),
     );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Coming soon!',
-          style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w600)),
-      backgroundColor: Theme.of(context).colorScheme.secondary,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      margin: const EdgeInsets.all(16),
-      duration: const Duration(seconds: 1),
-    ));
   }
 }
 
@@ -423,31 +387,4 @@ class _FieldLabel extends StatelessWidget {
           color: Color(0xFF3A3A3A),
         ),
       );
-}
-
-class _SocialButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SocialButton(
-      {required this.label, required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 22),
-      label: Text(label,
-          style: const TextStyle(
-              fontFamily: 'Nunito', fontWeight: FontWeight.w700)),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 52),
-        foregroundColor: const Color(0xFF3A3A3A),
-        side: BorderSide(color: Colors.grey.shade200, width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: Colors.white,
-      ),
-    );
-  }
 }

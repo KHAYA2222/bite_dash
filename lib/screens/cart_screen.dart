@@ -1,13 +1,17 @@
 // screens/cart_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:foodie_app/providers/auth_provider.dart';
 import '../models/food.dart';
 import '../providers/cart_provider.dart';
 
 class CartScreen extends StatefulWidget {
   final CartProvider cartProvider;
 
-  const CartScreen({super.key, required this.cartProvider});
+  const CartScreen(
+      {super.key,
+      required this.cartProvider,
+      required AuthProvider authProvider});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
