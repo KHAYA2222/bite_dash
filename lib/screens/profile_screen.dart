@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
+import 'seed_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final AuthProvider authProvider;
@@ -167,9 +168,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     _MenuItem(
                       icon: Icons.info_outline_rounded,
-                      label: 'About FoodDash',
+                      label: 'About Foodie',
                       onTap: _showComingSoon,
                     ),
+                    // _MenuItem(
+                    //   icon: Icons.cloud_upload_outlined,
+                    //   label: 'Seed Database',
+                    //   onTap: () => Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(builder: (_) => const SeedScreen()),
+                    //   ),
+                    // ),
                   ]),
                 ),
                 SliverToBoxAdapter(
@@ -303,15 +312,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       child: Row(
         children: [
-          const _StatCard(
+          _StatCard(
               label: 'Orders', value: '0', icon: Icons.receipt_long_outlined),
           _VertDivider(),
-          const _StatCard(
+          _StatCard(
               label: 'Favourites',
               value: '0',
               icon: Icons.favorite_border_rounded),
           _VertDivider(),
-          const _StatCard(
+          _StatCard(
               label: 'Reviews', value: '0', icon: Icons.star_border_rounded),
         ],
       ),
@@ -559,7 +568,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           const SizedBox(height: 24),
 
           // Name
-          const _Label('Full Name'),
+          _Label('Full Name'),
           const SizedBox(height: 8),
           TextField(
             controller: _nameCtrl,
@@ -573,7 +582,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           const SizedBox(height: 16),
 
           // Phone
-          const _Label('Phone Number'),
+          _Label('Phone Number'),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
