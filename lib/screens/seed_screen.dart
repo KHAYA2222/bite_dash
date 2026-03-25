@@ -86,13 +86,13 @@ class _SeedScreenState extends State<SeedScreen> {
               const SizedBox(height: 24),
 
               // What gets seeded
-              _SeedItem(
+              const _SeedItem(
                   icon: Icons.restaurant_menu_rounded,
                   label: '16 food items',
                   subtitle:
-                      'Burgers, Pizza, Sushi, Salads, Pasta, Desserts, Drinks'),
+                      'Burgers, Pizza, Sushi, Salads, Pasta, Desserts, Drinks,'),
               const SizedBox(height: 12),
-              _SeedItem(
+              const _SeedItem(
                   icon: Icons.category_outlined,
                   label: '7 categories',
                   subtitle: 'Used for the category filter chips on Home'),
