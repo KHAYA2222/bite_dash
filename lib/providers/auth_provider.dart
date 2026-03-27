@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../services/notification_service.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -23,8 +24,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _status == AuthStatus.authenticated;
 
   // ---------------------------------------------------------------------------
-  // Init — listens to Firebase auth state changes.
-  // Called once in main.dart. Automatically restores session on app relaunch.
+  // Init
   // ---------------------------------------------------------------------------
   void init() {
     _auth.authStateChanges().listen((firebaseUser) async {
@@ -36,20 +36,24 @@ class AuthProvider extends ChangeNotifier {
         await _loadUserProfile(firebaseUser.uid);
         _status = AuthStatus.authenticated;
         notifyListeners();
+        // Init FCM — save token to Firestore, wire up foreground handler
+        NotificationService().init(firebaseUser.uid);
+        NotificationService().onForegroundMessage = (title, body) {
+          NotificationOverlay.show(title, body);
+        };
       }
     });
   }
 
   // ---------------------------------------------------------------------------
-  // Load user profile from Firestore
+  // Load profile
   // ---------------------------------------------------------------------------
   Future<void> _loadUserProfile(String uid) async {
-    try {
+    await _safeCall(() async {
       final doc = await _db.collection('users').doc(uid).get();
       if (doc.exists && doc.data() != null) {
         _currentUser = UserModel.fromJson({...doc.data()!, 'id': doc.id});
       } else {
-        // Firestore doc missing — build minimal profile from FirebaseAuth
         final fbUser = _auth.currentUser!;
         _currentUser = UserModel(
           id: fbUser.uid,
@@ -57,12 +61,9 @@ class AuthProvider extends ChangeNotifier {
           email: fbUser.email ?? '',
           createdAt: DateTime.now(),
         );
-        // Try to write the missing document
         await _writeUserDocument(_currentUser!);
       }
-    } catch (e) {
-      debugPrint('[AuthProvider] _loadUserProfile error: $e');
-      // Build a minimal profile so the app doesn't crash
+    }, fallback: () {
       final fbUser = _auth.currentUser;
       if (fbUser != null) {
         _currentUser = UserModel(
@@ -72,7 +73,7 @@ class AuthProvider extends ChangeNotifier {
           createdAt: DateTime.now(),
         );
       }
-    }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -84,29 +85,23 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _clearError();
-    try {
+
+    bool success = false;
+    await _safeCall(() async {
       await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      // authStateChanges() listener handles the rest
-      return true;
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-          '[AuthProvider] signIn FirebaseAuthException: ${e.code} — ${e.message}');
-      _setError(_friendlyAuthError(e.code));
-      return false;
-    } catch (e) {
-      debugPrint('[AuthProvider] signIn unexpected error: $e');
-      _setError('Sign in failed. Please try again.');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+      success = true;
+    }, onError: (msg) => _setError(msg));
+
+    _setLoading(false);
+    return success;
   }
 
   // ---------------------------------------------------------------------------
-  // Sign Up
+  // Sign Up — two completely independent safe calls so no Firebase type
+  // is ever held as a nullable across scope boundaries (web JS issue).
   // ---------------------------------------------------------------------------
   Future<bool> signUp({
     required String name,
@@ -117,65 +112,53 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
-    UserCredential? cred;
-
-    try {
-      // Step 1 — Create the Firebase Auth account
-      cred = await _auth.createUserWithEmailAndPassword(
+    // ── Step 1: Create Auth account ──────────────────────────────────────────
+    String? uid;
+    await _safeCall(() async {
+      final cred = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      debugPrint('[AuthProvider] Auth account created: ${cred.user?.uid}');
+      uid = cred.user!.uid;
+      await cred.user!.updateDisplayName(name.trim());
+      debugPrint('[Auth] Account created: $uid');
+    }, onError: (msg) {
+      _setError(msg);
+    });
 
-      // Step 2 — Set display name in FirebaseAuth
-      await cred.user?.updateDisplayName(name.trim());
-      debugPrint('[AuthProvider] Display name set.');
+    if (uid == null) {
+      _setLoading(false);
+      return false;
+    }
 
-      // Step 3 — Build the user model
+    // ── Step 2: Write Firestore document (non-fatal if it fails) ─────────────
+    await _safeCall(() async {
       final user = UserModel(
-        id: cred.user!.uid,
+        id: uid!,
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        phone: (phone?.trim().isEmpty ?? true) ? null : phone!.trim(),
+        phone: (phone == null || phone.trim().isEmpty) ? null : phone.trim(),
         createdAt: DateTime.now(),
       );
-
-      // Step 4 — Write Firestore document
       await _writeUserDocument(user);
-      debugPrint('[AuthProvider] Firestore document written for ${user.id}');
+      debugPrint('[Auth] Firestore doc written for $uid');
+    });
+    // Non-fatal — authStateChanges() will still log the user in
 
-      return true;
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-          '[AuthProvider] signUp FirebaseAuthException: ${e.code} — ${e.message}');
-      _setError(_friendlyAuthError(e.code));
-      return false;
-    } catch (e) {
-      debugPrint('[AuthProvider] signUp unexpected error: $e');
-      // Auth account was created but Firestore write failed.
-      // The authStateChanges() listener will still log them in.
-      // Return true so the user isn't stuck — their profile will
-      // be created lazily in _loadUserProfile on next launch.
-      if (cred != null) {
-        debugPrint(
-            '[AuthProvider] Auth succeeded but Firestore write failed. User will still be logged in.');
-        return true;
-      }
-      _setError('Sign up failed. Please try again.');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+    _setLoading(false);
+    return true;
   }
 
   // ---------------------------------------------------------------------------
-  // Write user document to Firestore
+  // Write Firestore user document
   // ---------------------------------------------------------------------------
   Future<void> _writeUserDocument(UserModel user) async {
-    final data = user.toJson()..remove('id'); // don't store id inside document
-    await _db.collection('users').doc(user.id).set(data,
-        SetOptions(merge: true)); // merge:true = safe to call multiple times
-    debugPrint('[AuthProvider] users/${user.id} written: $data');
+    final data = Map<String, dynamic>.from(user.toJson())..remove('id');
+    await _db
+        .collection('users')
+        .doc(user.id)
+        .set(data, SetOptions(merge: true));
+    debugPrint('[Auth] users/${user.id} written');
   }
 
   // ---------------------------------------------------------------------------
@@ -183,17 +166,15 @@ class AuthProvider extends ChangeNotifier {
   // ---------------------------------------------------------------------------
   Future<void> signOut() async {
     _setLoading(true);
-    try {
+    await _safeCall(() async {
+      final uid = _currentUser?.id;
       await _auth.signOut();
+      if (uid != null) await NotificationService().clearToken(uid);
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
-      debugPrint('[AuthProvider] Signed out.');
-    } catch (e) {
-      debugPrint('[AuthProvider] signOut error: $e');
-    } finally {
-      _setLoading(false);
-      notifyListeners();
-    }
+    });
+    _setLoading(false);
+    notifyListeners();
   }
 
   // ---------------------------------------------------------------------------
@@ -206,7 +187,8 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     if (_currentUser == null) return false;
     _setLoading(true);
-    try {
+    bool success = false;
+    await _safeCall(() async {
       final updates = <String, dynamic>{
         'name': name.trim(),
         if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
@@ -221,34 +203,80 @@ class AuthProvider extends ChangeNotifier {
         deliveryAddress: deliveryAddress,
       );
       notifyListeners();
-      debugPrint('[AuthProvider] Profile updated: $updates');
-      return true;
-    } catch (e) {
-      debugPrint('[AuthProvider] updateProfile error: $e');
-      _setError('Failed to update profile. Please try again.');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+      success = true;
+    }, onError: (_) => _setError('Failed to update profile.'));
+    _setLoading(false);
+    return success;
   }
 
   // ---------------------------------------------------------------------------
   // Password reset
   // ---------------------------------------------------------------------------
   Future<bool> sendPasswordReset(String email) async {
-    try {
+    bool success = false;
+    await _safeCall(() async {
       await _auth.sendPasswordResetEmail(email: email.trim());
-      debugPrint('[AuthProvider] Password reset email sent to $email');
-      return true;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('[AuthProvider] sendPasswordReset error: ${e.code}');
-      _setError(_friendlyAuthError(e.code));
-      return false;
-    } catch (e) {
-      debugPrint('[AuthProvider] sendPasswordReset unexpected: $e');
-      _setError('Could not send reset email.');
-      return false;
+      success = true;
+    }, onError: (msg) => _setError(msg));
+    return success;
+  }
+
+  // ---------------------------------------------------------------------------
+  // _safeCall — the web-compatible error wrapper.
+  //
+  // On Flutter Web, Firebase throws raw JavaScript objects that are NOT
+  // Dart types. You cannot use "on FirebaseAuthException" or even
+  // "e is FirebaseAuthException" reliably. The only safe approach is:
+  //
+  //   1. Catch everything as Object (not Exception or Error)
+  //   2. Convert .toString() to extract the Firebase error code
+  //   3. Never hold a Firebase type as nullable across try/catch scope
+  // ---------------------------------------------------------------------------
+  Future<void> _safeCall(
+    Future<void> Function() action, {
+    void Function(String message)? onError,
+    void Function()? fallback,
+  }) async {
+    try {
+      await action();
+    } catch (e, stack) {
+      debugPrint('[Auth] Error: $e');
+      debugPrint('[Auth] Stack: $stack');
+      fallback?.call();
+      onError?.call(_parseError(e));
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parse any exception type into a user-friendly message.
+  // Works by converting to String — the only reliable approach on web.
+  // ---------------------------------------------------------------------------
+  String _parseError(Object e) {
+    final raw = e.toString().toLowerCase();
+
+    // Map of Firebase error code substrings → friendly messages
+    final Map<String, String> errorMap = {
+      'user-not-found': 'No account found with this email.',
+      'wrong-password': 'Incorrect email or password.',
+      'invalid-credential': 'Incorrect email or password.',
+      'email-already-in-use': 'An account already exists with this email.',
+      'weak-password': 'Password is too weak. Minimum 6 characters.',
+      'invalid-email': 'Please enter a valid email address.',
+      'user-disabled': 'This account has been disabled.',
+      'too-many-requests': 'Too many attempts. Try again later.',
+      'network-request-failed': 'No internet connection.',
+      'permission-denied': 'Permission denied. Check Firestore rules.',
+      'unavailable': 'Service unavailable. Try again.',
+      'not-found': 'Account not found.',
+      'expired-action-code': 'This link has expired.',
+      'invalid-action-code': 'This link is invalid.',
+    };
+
+    for (final entry in errorMap.entries) {
+      if (raw.contains(entry.key)) return entry.value;
+    }
+
+    return 'Something went wrong. Please try again.';
   }
 
   // ---------------------------------------------------------------------------
@@ -271,30 +299,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void clearError() => _clearError();
-
-  String _friendlyAuthError(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No account found with this email.';
-      case 'wrong-password':
-      case 'invalid-credential':
-        return 'Incorrect email or password.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'network-request-failed':
-        return 'No internet connection. Please check your network.';
-      default:
-        return 'Something went wrong ($code). Please try again.';
-    }
-  }
 
   String _nameFromEmail(String email) {
     final local = email.split('@').first;
