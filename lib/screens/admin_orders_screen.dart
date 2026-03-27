@@ -78,7 +78,7 @@ class _OrdersList extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return StreamBuilder<List<Order>>(
-      stream: OrderService().allOrdersStream().map((items) => items.cast<Order>()),
+      stream: OrderService().allOrdersStream(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator(color: cs.primary));
@@ -135,9 +135,53 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Future<void> _updateStatus(OrderStatus status) async {
     setState(() => _updating = true);
-    await OrderService().updateOrderStatus(widget.order.id, status);
-    await OrderService().markOrderRead(widget.order.id);
-    if (mounted) setState(() => _updating = false);
+
+    final success =
+        await OrderService().updateOrderStatus(widget.order.id, status);
+
+    if (!mounted) return;
+
+    if (success) {
+      await OrderService().markOrderRead(widget.order.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Text('Order marked as ${status.label}',
+                style: const TextStyle(
+                    fontFamily: 'Nunito', fontWeight: FontWeight.w600)),
+          ]),
+          backgroundColor: const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(children: [
+            Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 10),
+            Text('Update failed — check Firestore rules',
+                style: TextStyle(
+                    fontFamily: 'Nunito', fontWeight: FontWeight.w600)),
+          ]),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    setState(() => _updating = false);
   }
 
   @override
