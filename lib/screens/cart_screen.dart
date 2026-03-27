@@ -1,17 +1,21 @@
 // screens/cart_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:foodie_app/providers/auth_provider.dart';
 import '../models/food.dart';
+import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../services/order_service.dart';
+import 'order_tracking_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final CartProvider cartProvider;
+  final AuthProvider authProvider;
 
-  const CartScreen(
-      {super.key,
-      required this.cartProvider,
-      required AuthProvider authProvider});
+  const CartScreen({
+    super.key,
+    required this.cartProvider,
+    required this.authProvider,
+  });
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -21,7 +25,6 @@ class _CartScreenState extends State<CartScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   bool _isOrdering = false;
-  bool _orderPlaced = false;
 
   CartProvider get cart => widget.cartProvider;
 
@@ -42,22 +45,51 @@ class _CartScreenState extends State<CartScreen>
 
   Future<void> _placeOrder() async {
     setState(() => _isOrdering = true);
-    await Future.delayed(const Duration(seconds: 2));
+    final user = widget.authProvider.currentUser;
+    final order = await OrderService().placeOrder(
+      userId: user?.id ?? '',
+      customerName: user?.name ?? '',
+      customerEmail: user?.email ?? '',
+      items: cart.items.toList(),
+      subtotal: cart.subtotal,
+      deliveryFee: cart.deliveryFee,
+      total: cart.total,
+      deliveryAddress: user?.deliveryAddress ?? '',
+    );
+    setState(() => _isOrdering = false);
+
+    if (order == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Could not place order. Please try again.',
+              style: TextStyle(fontFamily: 'Nunito')),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.all(16),
+        ));
+      }
+      return;
+    }
+
     cart.clearCart();
-    setState(() {
-      _isOrdering = false;
-      _orderPlaced = true;
-    });
+
+    if (mounted) {
+      // Navigate to real-time tracking screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderTrackingScreen(order: order),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-
-    if (_orderPlaced) {
-      return _buildSuccessScreen(cs, theme);
-    }
 
     return Scaffold(
       backgroundColor: cs.background,
@@ -153,11 +185,8 @@ class _CartScreenState extends State<CartScreen>
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.delivery_dining_rounded,
-                    color: cs.primary,
-                    size: 18,
-                  ),
+                  Icon(Icons.delivery_dining_rounded,
+                      color: cs.primary, size: 18),
                   const SizedBox(width: 8),
                   Text(
                     'Add R${remaining.toStringAsFixed(2)} more for FREE delivery!',
@@ -190,11 +219,7 @@ class _CartScreenState extends State<CartScreen>
   Widget _buildOrderSummary(ColorScheme cs, ThemeData theme) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        20 + MediaQuery.of(context).padding.bottom,
-      ),
+          20, 20, 20, 20 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -219,7 +244,7 @@ class _CartScreenState extends State<CartScreen>
             label: 'Delivery',
             value: cart.freeDelivery
                 ? 'FREE 🎉'
-                : '\R${cart.deliveryFee.toStringAsFixed(2)}',
+                : 'R${cart.deliveryFee.toStringAsFixed(2)}',
             valueColor: cart.freeDelivery ? cs.primary : null,
           ),
           const Padding(
@@ -269,11 +294,8 @@ class _CartScreenState extends State<CartScreen>
                 color: cs.primaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.shopping_bag_outlined,
-                size: 48,
-                color: cs.primary,
-              ),
+              child: Icon(Icons.shopping_bag_outlined,
+                  size: 48, color: cs.primary),
             ),
             const SizedBox(height: 24),
             Text(
@@ -302,97 +324,6 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  Widget _buildSuccessScreen(ColorScheme cs, ThemeData theme) {
-    return Scaffold(
-      backgroundColor: cs.background,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.elasticOut,
-                  builder: (_, v, child) =>
-                      Transform.scale(scale: v, child: child),
-                  child: Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 60,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                Text(
-                  'Order Placed! 🎉',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF1B2B1C),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Your food is being prepared and\nwill arrive shortly.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF6E6E6E),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.schedule_rounded, color: cs.primary),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Estimated: 25–35 mins',
-                        style: TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w700,
-                          color: cs.onPrimaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                  ),
-                  child: const Text('Back to Home'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showClearCartDialog(BuildContext context, ColorScheme cs) {
     showDialog(
       context: context,
@@ -400,7 +331,10 @@ class _CartScreenState extends State<CartScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Clear Cart?',
-          style: TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w800),
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w800,
+          ),
         ),
         content: const Text(
           'Are you sure you want to remove all items from your cart?',
@@ -416,7 +350,9 @@ class _CartScreenState extends State<CartScreen>
               cart.clearCart();
               Navigator.pop(ctx);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: cs.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: cs.error,
+            ),
             child: const Text('Clear', style: TextStyle(fontFamily: 'Nunito')),
           ),
         ],
@@ -454,11 +390,8 @@ class _CartItemCard extends StatelessWidget {
           color: cs.error,
           borderRadius: BorderRadius.circular(18),
         ),
-        child: const Icon(
-          Icons.delete_outline_rounded,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: const Icon(Icons.delete_outline_rounded,
+            color: Colors.white, size: 28),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -476,9 +409,8 @@ class _CartItemCard extends StatelessWidget {
           children: [
             // Image
             ClipRRect(
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(18),
-              ),
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(18)),
               child: SizedBox(
                 width: 90,
                 height: 90,
@@ -537,13 +469,11 @@ class _CartItemCard extends StatelessWidget {
                           child: Row(
                             children: [
                               _SmallQBtn(
-                                icon: Icons.remove_rounded,
-                                onTap: onDecrement,
-                              ),
+                                  icon: Icons.remove_rounded,
+                                  onTap: onDecrement),
                               Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
                                 child: Text(
                                   '${item.quantity}',
                                   style: TextStyle(
@@ -555,9 +485,7 @@ class _CartItemCard extends StatelessWidget {
                                 ),
                               ),
                               _SmallQBtn(
-                                icon: Icons.add_rounded,
-                                onTap: onIncrement,
-                              ),
+                                  icon: Icons.add_rounded, onTap: onIncrement),
                             ],
                           ),
                         ),

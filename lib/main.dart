@@ -34,7 +34,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _authProvider),
-        ChangeNotifierProvider(create: (_) => FoodProvider()),
+        ChangeNotifierProvider<FoodProvider>(create: (_) => FoodProvider()),
       ],
       child: const FoodieApp(),
     ),

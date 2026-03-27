@@ -12,7 +12,7 @@ class OrderTrackingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Order?>(
-      stream: OrderService().orderStream(order.id),
+      stream: OrderService().orderStream(order.id).cast<Order?>(),
       initialData: order,
       builder: (context, snap) {
         final current = snap.data ?? order;

@@ -78,7 +78,7 @@ class _OrdersList extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return StreamBuilder<List<Order>>(
-      stream: OrderService().allOrdersStream(),
+      stream: OrderService().allOrdersStream().map((items) => items.cast<Order>()),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator(color: cs.primary));

@@ -1,7 +1,7 @@
 // services/order_service.dart
 // All order-related Firestore operations.
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:flutter/foundation.dart';
 import '../models/food.dart';
 

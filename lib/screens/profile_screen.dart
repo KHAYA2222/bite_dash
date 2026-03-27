@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
+import 'admin_orders_screen.dart';
+import 'orders_screen.dart';
 import 'seed_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -77,6 +79,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
+
+  // ── Admin check ──────────────────────────────────────────────────────────
+  // Add your admin email(s) here. In production use a Firestore 'admins'
+  // collection or Firebase custom claims instead of hardcoded emails.
+  static const _adminEmails = <String>[
+    'test@gmail.com', // ← replace with your admin email
+  ];
+
+  bool _isAdmin(String email) =>
+      _adminEmails.contains(email.toLowerCase().trim());
 
   void _showComingSoon() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -154,7 +166,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     _MenuItem(
                       icon: Icons.receipt_long_outlined,
                       label: 'Order History',
-                      onTap: _showComingSoon,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OrdersScreen(
+                            userId: widget.authProvider.currentUser!.id,
+                          ),
+                        ),
+                      ),
                     ),
                     _MenuItem(
                       icon: Icons.favorite_border_rounded,
@@ -184,6 +203,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                         MaterialPageRoute(builder: (_) => const SeedScreen()),
                       ),
                     ),
+                    // Admin Orders — visible to admin emails only
+                    if (_isAdmin(user.email))
+                      _MenuItem(
+                        icon: Icons.admin_panel_settings_outlined,
+                        label: 'Admin — Orders',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AdminOrdersScreen()),
+                        ),
+                      ),
                   ]),
                 ),
                 SliverToBoxAdapter(
