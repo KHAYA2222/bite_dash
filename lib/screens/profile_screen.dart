@@ -84,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   // Replace with your real admin email(s).
   // For production: use Firestore isAdmin field or Firebase Custom Claims.
   static const _adminEmails = <String>[
-    'admin@foodie.co.za',
+    'test@gmail.com',
   ];
 
   bool _isAdmin(String email) =>
@@ -349,15 +349,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       child: Row(
         children: [
-          _StatCard(
+          const _StatCard(
               label: 'Orders', value: '0', icon: Icons.receipt_long_outlined),
           _VertDivider(),
-          _StatCard(
+          const _StatCard(
               label: 'Favourites',
               value: '0',
               icon: Icons.favorite_border_rounded),
           _VertDivider(),
-          _StatCard(
+          const _StatCard(
               label: 'Reviews', value: '0', icon: Icons.star_border_rounded),
         ],
       ),
@@ -605,7 +605,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           const SizedBox(height: 24),
 
           // Name
-          _Label('Full Name'),
+          const _Label('Full Name'),
           const SizedBox(height: 8),
           TextField(
             controller: _nameCtrl,
@@ -619,7 +619,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           const SizedBox(height: 16),
 
           // Phone
-          _Label('Phone Number'),
+          const _Label('Phone Number'),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
