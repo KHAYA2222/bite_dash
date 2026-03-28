@@ -5,6 +5,7 @@ import '../models/food.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/order_service.dart';
+import 'delivery_address_screen.dart';
 import 'order_tracking_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -44,17 +45,33 @@ class _CartScreenState extends State<CartScreen>
   }
 
   Future<void> _placeOrder() async {
-    setState(() => _isOrdering = true);
+    // Require a delivery address before placing
     final user = widget.authProvider.currentUser;
+    final address = user?.deliveryAddress ?? '';
+    if (address.isEmpty) {
+      final saved = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DeliveryAddressScreen(
+            authProvider: widget.authProvider,
+            isCheckout: true,
+          ),
+        ),
+      );
+      if (saved == null || saved.isEmpty) return; // user cancelled
+    }
+
+    setState(() => _isOrdering = true);
+    final updatedUser = widget.authProvider.currentUser;
     final order = await OrderService().placeOrder(
-      userId: user?.id ?? '',
-      customerName: user?.name ?? '',
-      customerEmail: user?.email ?? '',
+      userId: updatedUser?.id ?? '',
+      customerName: updatedUser?.name ?? '',
+      customerEmail: updatedUser?.email ?? '',
       items: cart.items.toList(),
       subtotal: cart.subtotal,
       deliveryFee: cart.deliveryFee,
       total: cart.total,
-      deliveryAddress: user?.deliveryAddress ?? '',
+      deliveryAddress: updatedUser?.deliveryAddress ?? '',
     );
     setState(() => _isOrdering = false);
 

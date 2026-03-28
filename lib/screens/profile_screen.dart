@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
-import 'admin_orders_screen.dart';
+import 'admin_dashboard.dart';
+import 'delivery_address_screen.dart';
 import 'orders_screen.dart';
-import 'seed_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final AuthProvider authProvider;
@@ -81,10 +81,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   // ── Admin check ──────────────────────────────────────────────────────────
-  // Add your admin email(s) here. In production use a Firestore 'admins'
-  // collection or Firebase custom claims instead of hardcoded emails.
+  // Replace with your real admin email(s).
+  // For production: use Firestore isAdmin field or Firebase Custom Claims.
   static const _adminEmails = <String>[
-    'test@gmail.com', // ← replace with your admin email
+    'admin@foodie.co.za',
   ];
 
   bool _isAdmin(String email) =>
@@ -150,8 +150,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     _MenuItem(
                       icon: Icons.location_on_outlined,
-                      label: 'Delivery Addresses',
-                      onTap: _showComingSoon,
+                      label: 'Delivery Address',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DeliveryAddressScreen(
+                            authProvider: widget.authProvider,
+                          ),
+                        ),
+                      ),
                     ),
                     _MenuItem(
                       icon: Icons.credit_card_outlined,
@@ -195,23 +202,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                       label: 'About Foodie',
                       onTap: _showComingSoon,
                     ),
-                    _MenuItem(
-                      icon: Icons.cloud_upload_outlined,
-                      label: 'Seed Database',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SeedScreen()),
-                      ),
-                    ),
-                    // Admin Orders — visible to admin emails only
+                    // Admin Dashboard — only visible when isAdmin == true
                     if (_isAdmin(user.email))
                       _MenuItem(
                         icon: Icons.admin_panel_settings_outlined,
-                        label: 'Admin — Orders',
+                        label: 'Admin Dashboard',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const AdminOrdersScreen()),
+                            builder: (_) => AdminDashboard(
+                              authProvider: widget.authProvider,
+                            ),
+                          ),
                         ),
                       ),
                   ]),
