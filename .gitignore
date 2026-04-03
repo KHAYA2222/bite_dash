@@ -44,3 +44,26 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase configuration files
+google-services.json
+GoogleService-Info.plist
+firebase.json
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.keystore
+
+# Local properties
+local.properties
+
+# IDE-specific
+.vscode/launch.json
+.vscode/tasks.json
