@@ -1,69 +1,105 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# ────────────────────────────────────────────────────────────────
+# 🔒 SECRETS & ENV (CRITICAL — PAYFAST + FIREBASE)
+# ────────────────────────────────────────────────────────────────
+.env
+*.env
+!.env.example
+.env.local
+.env.*.local
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# PayFast / payment secrets
+*payfast*
+*.key
+*.pem
+*.p12
+*.pfx
+*.p8
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Firebase sensitive configs (safer to ignore in public repo)
+google-services.json
+GoogleService-Info.plist
+firebase.json
+.firebaserc
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ────────────────────────────────────────────────────────────────
+# 🚀 FLUTTER / DART
+# ────────────────────────────────────────────────────────────────
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
-.auth_provider.dart
+build/
+coverage/
 
-# Symbolication related
-app.*.symbols
+# Generated files
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
-# Obfuscation related
-app.*.map.json
+# ────────────────────────────────────────────────────────────────
+# 🤖 ANDROID
+# ────────────────────────────────────────────────────────────────
+android/local.properties
+android/.gradle/
+android/key.properties
 
-# Android Studio will place build artifacts here
+# Signing keys (VERY sensitive)
+*.jks
+*.keystore
+
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# Firebase configuration files
-google-services.json
-GoogleService-Info.plist
-firebase.json
+# ────────────────────────────────────────────────────────────────
+# 🍎 iOS
+# ────────────────────────────────────────────────────────────────
+ios/.generated/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Pods/
+ios/.symlinks/
+*.ipa
 
-# Environment variables and secrets
-.env
-.env.local
-.env.*.local
-*.pem
-*.key
-*.p8
-*.p12
-*.pfx
-*.keystore
+# ────────────────────────────────────────────────────────────────
+# ☁️ FIREBASE FUNCTIONS (if used)
+# ────────────────────────────────────────────────────────────────
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.runtimeconfig.json
 
-# Local properties
-local.properties
+# ────────────────────────────────────────────────────────────────
+# 🧠 IDE / EDITORS
+# ────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
 
-# IDE-specific
-.vscode/launch.json
-.vscode/tasks.json
+.vscode/
+*.swp
+
+# ────────────────────────────────────────────────────────────────
+# 🗂️ OS / MISC
+# ────────────────────────────────────────────────────────────────
+.DS_Store
+*.log
+*.pyc
+*.class
+.history
+.svn/
+.build/
+.buildlog/
+
+# ────────────────────────────────────────────────────────────────
+# 🔐 OPTIONAL SECURITY HARDENING
+# ────────────────────────────────────────────────────────────────
+# Prevent accidental uploads of backups or exports
+*.backup
+*.bak
+*.tmp
+*.export
