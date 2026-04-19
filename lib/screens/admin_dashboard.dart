@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 // screens/admin_dashboard.dart
 // Full admin dashboard — Orders, Menu, Stats.
 // Only accessible when user.isAdmin == true (set in Firestore).
@@ -24,7 +25,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -74,6 +75,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             Tab(
                 icon: Icon(Icons.restaurant_menu_rounded, size: 20),
                 text: 'Menu'),
+            Tab(
+                icon: Icon(Icons.delivery_dining_rounded, size: 20),
+                text: 'Drivers'),
             Tab(icon: Icon(Icons.bar_chart_rounded, size: 20), text: 'Stats'),
           ],
         ),
@@ -81,11 +85,9 @@ class _AdminDashboardState extends State<AdminDashboard>
       body: TabBarView(
         controller: _tabs,
         children: [
-          // Tab 1 — Orders
           const _OrdersTab(),
-          // Tab 2 — Menu management
           const AdminMenuScreen(),
-          // Tab 3 — Stats
+          const _DriversTab(),
           _StatsTab(),
         ],
       ),
@@ -165,7 +167,7 @@ class _StatsTab extends StatelessWidget {
     return StreamBuilder<List<Order>>(
       stream: OrderService().allOrdersStream(),
       builder: (context, snap) {
-        final orders = snap.data ?? [];
+        final orders = (snap.data ?? []).whereType<Order>().toList();
         final total = orders.fold(0.0, (s, o) => s + o.total);
         final active = orders
             .where((o) =>
@@ -406,6 +408,155 @@ class _RecentOrderRow extends StatelessWidget {
   }
 }
 
+// ── Drivers tab ───────────────────────────────────────────────────────────────
+
+class _DriversTab extends StatelessWidget {
+  const _DriversTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final db = FirebaseFirestore.instance;
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream:
+          db.collection('users').where('role', isEqualTo: 'driver').snapshots(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: cs.primary));
+        }
+        final drivers = snap.data?.docs ?? [];
+
+        return Column(
+          children: [
+            // Invite / assign driver info
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(children: [
+                Icon(Icons.info_outline_rounded, color: cs.primary, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'To add a driver, go to Firebase Console → Firestore → users → find their document → set role: "driver"',
+                    style: TextStyle(
+                        color: cs.onPrimaryContainer,
+                        fontSize: 12,
+                        height: 1.5),
+                  ),
+                ),
+              ]),
+            ),
+            if (drivers.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delivery_dining_rounded,
+                          size: 56, color: cs.primary),
+                      const SizedBox(height: 16),
+                      const Text('No drivers yet',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 18)),
+                      const SizedBox(height: 8),
+                      const Text('Assign the driver role in Firestore',
+                          style: TextStyle(color: Color(0xFF9E9E9E))),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: drivers.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) {
+                    final d = drivers[i].data();
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2))
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                (d['name'] as String? ?? '?')[0].toUpperCase(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(d['name'] as String? ?? 'Unknown',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 15)),
+                                Text(d['email'] as String? ?? '',
+                                    style: const TextStyle(
+                                        color: Color(0xFF9E9E9E),
+                                        fontSize: 12)),
+                                if (d['phone'] != null)
+                                  Text(d['phone'] as String,
+                                      style: const TextStyle(
+                                          color: Color(0xFF9E9E9E),
+                                          fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: cs.primaryContainer,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text('Active',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: cs.primary)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 // ── Orders list (used by _OrdersTab) ─────────────────────────────────────────
 
 class _OrdersList extends StatelessWidget {
@@ -422,7 +573,7 @@ class _OrdersList extends StatelessWidget {
         if (snap.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator(color: cs.primary));
         }
-        var orders = snap.data ?? [];
+        var orders = (snap.data ?? []).whereType<Order>().toList();
         if (activeOnly) {
           orders = orders
               .where((o) =>
