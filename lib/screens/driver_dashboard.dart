@@ -124,7 +124,7 @@ class _AvailableOrdersTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return StreamBuilder<List<Order>>(
-      stream: OrderService().availableOrdersStream(),
+      stream: OrderService().availableOrdersStream().cast<List<Order>>(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator(color: cs.primary));
@@ -325,7 +325,9 @@ class _ActiveDeliveryTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return StreamBuilder<List<Order>>(
-      stream: OrderService().driverActiveOrdersStream(driver.id),
+      stream: OrderService()
+          .driverActiveOrdersStream(driver.id)
+          .cast<List<Order>>(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator(color: cs.primary));
@@ -543,7 +545,9 @@ class _EarningsTab extends StatelessWidget {
     final theme = Theme.of(context);
 
     return StreamBuilder<List<Order>>(
-      stream: OrderService().driverCompletedOrdersStream(driver.id),
+      stream: OrderService()
+          .driverCompletedOrdersStream(driver.id)
+          .map((list) => list.cast<Order>()),
       builder: (context, snap) {
         final orders = snap.data ?? [];
         final totalEarnings = orders.fold(0.0, (sum, o) => sum + o.deliveryFee);
