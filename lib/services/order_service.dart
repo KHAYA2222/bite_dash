@@ -1,7 +1,7 @@
 // services/order_service.dart
 // All order-related Firestore operations.
 
-import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/food.dart';
 
@@ -25,6 +25,8 @@ class OrderService {
     required double deliveryFee,
     required double total,
     String deliveryAddress = '',
+    String paymentMethod = 'cod',
+    String paymentStatus = 'pending',
   }) async {
     try {
       // Generate a short human-readable order number
@@ -43,8 +45,12 @@ class OrderService {
         'orderNumber': orderNumber,
         'createdAt': FieldValue.serverTimestamp(),
         // Admin notification fields
-        'isRead': false, // admin marks as read
-        'adminNote': '', // admin can add a note
+        'isRead': false,
+        'adminNote': '',
+        'paymentMethod': paymentMethod,
+        'paymentStatus': paymentStatus,
+        'driverId': null,
+        'driverName': null,
       };
 
       final ref = await _db.collection('orders').add(data);
@@ -129,14 +135,16 @@ class OrderService {
   /// Update an order's status. Called by admin.
   Future<bool> updateOrderStatus(String orderId, OrderStatus status) async {
     try {
+      debugPrint('[OrderService] Updating $orderId → ${status.value}');
       await _db.collection('orders').doc(orderId).update({
         'status': status.value,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      debugPrint('[OrderService] Order $orderId → ${status.label}');
+      debugPrint('[OrderService] ✅ Order $orderId → ${status.label}');
       return true;
     } catch (e) {
-      debugPrint('[OrderService] updateOrderStatus error: $e');
+      debugPrint('[OrderService] ❌ updateOrderStatus FAILED: $e');
+      debugPrint('[OrderService] orderId=$orderId status=${status.value}');
       return false;
     }
   }
@@ -147,6 +155,74 @@ class OrderService {
       await _db.collection('orders').doc(orderId).update({'isRead': true});
     } catch (e) {
       debugPrint('[OrderService] markOrderRead error: $e');
+    }
+  }
+
+  // ── Driver streams & actions ────────────────────────────────────────────────
+
+  /// Stream of orders ready for a driver to claim (confirmed, no driver yet).
+  Stream<List<Order>> availableOrdersStream() {
+    return _db
+        .collection('orders')
+        .where('status', isEqualTo: 'confirmed')
+        .where('driverId', isNull: true)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map(
+            (snap) => snap.docs.map((doc) => Order.fromFirestore(doc)).toList())
+        .handleError((e) {
+      debugPrint('[OrderService] availableOrdersStream error: $e');
+      return <Order>[];
+    });
+  }
+
+  /// Stream of orders currently assigned to a specific driver.
+  Stream<List<Order>> driverActiveOrdersStream(String driverId) {
+    return _db
+        .collection('orders')
+        .where('driverId', isEqualTo: driverId)
+        .where('status', whereIn: ['confirmed', 'onTheWay'])
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map(
+            (snap) => snap.docs.map((doc) => Order.fromFirestore(doc)).toList())
+        .handleError((e) {
+          debugPrint('[OrderService] driverActiveOrdersStream error: $e');
+          return <Order>[];
+        });
+  }
+
+  /// Completed deliveries for a driver (earnings history).
+  Stream<List<Order>> driverCompletedOrdersStream(String driverId) {
+    return _db
+        .collection('orders')
+        .where('driverId', isEqualTo: driverId)
+        .where('status', isEqualTo: 'delivered')
+        .orderBy('createdAt', descending: true)
+        .limit(50)
+        .snapshots()
+        .map(
+            (snap) => snap.docs.map((doc) => Order.fromFirestore(doc)).toList())
+        .handleError((e) {
+      debugPrint('[OrderService] driverCompletedOrdersStream error: $e');
+      return <Order>[];
+    });
+  }
+
+  /// Driver claims an available order.
+  Future<bool> claimOrder(
+      String orderId, String driverId, String driverName) async {
+    try {
+      await _db.collection('orders').doc(orderId).update({
+        'driverId': driverId,
+        'driverName': driverName,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('[OrderService] Order $orderId claimed by $driverId');
+      return true;
+    } catch (e) {
+      debugPrint('[OrderService] claimOrder error: $e');
+      return false;
     }
   }
 
