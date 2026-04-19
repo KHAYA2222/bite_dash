@@ -161,7 +161,11 @@ class Order {
   final OrderStatus status;
   final DateTime? createdAt;
   final String deliveryAddress;
-  final String? orderNumber; // short display ID e.g. #ORD-1234
+  final String? orderNumber;
+  final String? driverId; // assigned driver UID
+  final String? driverName; // driver display name
+  final String paymentMethod; // 'cod' | 'payfast'
+  final String paymentStatus; // 'pending' | 'paid' | 'awaiting_payment'
 
   const Order({
     required this.id,
@@ -176,6 +180,10 @@ class Order {
     this.createdAt,
     required this.deliveryAddress,
     this.orderNumber,
+    this.driverId,
+    this.driverName,
+    this.paymentMethod = 'cod',
+    this.paymentStatus = 'pending',
   });
 
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
@@ -196,6 +204,10 @@ class Order {
       createdAt: ts is Timestamp ? ts.toDate() : null,
       deliveryAddress: d['deliveryAddress'] as String? ?? '',
       orderNumber: d['orderNumber'] as String?,
+      driverId: d['driverId'] as String?,
+      driverName: d['driverName'] as String?,
+      paymentMethod: d['paymentMethod'] as String? ?? 'cod',
+      paymentStatus: d['paymentStatus'] as String? ?? 'pending',
       items: (d['items'] as List<dynamic>? ?? [])
           .map((i) => CartItem.fromJson(Map<String, dynamic>.from(i as Map)))
           .toList(),
@@ -277,7 +289,7 @@ enum OrderStatus {
       case OrderStatus.preparing:
         return 'The kitchen is busy making your food.';
       case OrderStatus.onTheWay:
-        return 'Your order is on its way to you!';
+        return 'Your driver is on the way to you!';
       case OrderStatus.delivered:
         return 'Order delivered. Enjoy your meal!';
       case OrderStatus.cancelled:
