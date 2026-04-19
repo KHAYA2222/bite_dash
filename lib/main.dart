@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
+import 'screens/driver_dashboard.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env BEFORE anything else
+  await dotenv.load(fileName: '.env');
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -157,16 +162,27 @@ class AuthWrapper extends StatelessWidget {
             ),
           ),
           child: authProvider.isAuthenticated
-              ? HomeScreen(
-                  key: const ValueKey('home'),
-                  authProvider: authProvider,
-                )
+              ? _routeByRole(authProvider)
               : LoginScreen(
                   key: const ValueKey('login'),
                   authProvider: authProvider,
                 ),
         );
       },
+    );
+  }
+
+  Widget _routeByRole(AuthProvider authProvider) {
+    final user = authProvider.currentUser;
+    if (user?.isDriver == true) {
+      return DriverDashboard(
+        key: const ValueKey('driver'),
+        authProvider: authProvider,
+      );
+    }
+    return HomeScreen(
+      key: const ValueKey('home'),
+      authProvider: authProvider,
     );
   }
 }
